@@ -14,21 +14,21 @@ void setup() {
 }
 
 void loop() {
-  // Check for serial commands
-  if (Serial.available()) {
+  // --- Read serial input ---
+  while (Serial.available()) {
     String command = Serial.readStringUntil('\n');
+    command.trim(); // remove any trailing newline or spaces
 
     if (command == "ALARM_ON") {
-      alarm_on = true;  // Start blinking
-    }
-    else if (command == "ALARM_OFF") {
-      alarm_on = false; // Stop blinking
+      alarm_on = true;
+    } else if (command == "ALARM_OFF") {
+      alarm_on = false;
       strip.clear();
       strip.show();
     }
   }
 
-  // Blink while alarm is on
+  // --- Blink LEDs if alarm is active ---
   if (alarm_on) {
     for (int i = 0; i < NUMPIXELS; i++) strip.setPixelColor(i, strip.Color(0, 0, 255)); // Blue
     strip.show();

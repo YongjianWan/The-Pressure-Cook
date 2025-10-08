@@ -3,7 +3,6 @@ import cv2.aruco as aruco
 import serial
 import os
 import time
-import threading
 
 # --- Arduino setup ---
 ser = serial.Serial('/dev/cu.usbmodem101', 9600)
@@ -23,7 +22,7 @@ for i, cam in enumerate(cams):
 aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
 parameters = aruco.DetectorParameters()
 
-# --- Stations per camera ---
+# --- Stations per camera (adjust coordinates to match your table) ---
 stations_cam1 = {
     "station1": (50, 100, 250, 250),   # knife
     "station2": (350, 100, 250, 250),  # peeler
@@ -72,12 +71,6 @@ def check_speech():
             os.system('say "Counter is messy"')
             last_speech_time = now
 
-def blink_led():
-    """Blink LED blue for 2 seconds"""
-    ser.write(b"ALARM_ON\n")
-    time.sleep(2)
-    ser.write(b"ALARM_OFF\n")
-
 # --- Main loop ---
 while True:
     frames = []
@@ -113,7 +106,7 @@ while True:
 
                 in_tray = is_in_tray((cx, cy), stations_this_frame[assigned_station])
 
-                color = (255, 0, 0) if not in_tray else (0, 255, 0)  # Blue when out
+                color = (255, 0, 0) if not in_tray else (0, 255, 0)  # Blue if out, green if in
                 text = f"Marker {marker_id}: {'OUT!' if not in_tray else 'In tray'}"
                 cv2.polylines(frame, [pts], True, color, 2)
                 cv2.putText(frame, text, (cx, cy-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
@@ -133,11 +126,20 @@ while True:
         combined = frames[0]
 
     # --- Handle alarms ---
-    marker_out = bool(current_out)
+    any_marker_out = bool(current_out)
+    if any_marker_out and not marker_out:
+        # Some marker went out, send ALARM_ON
+        ser.write(b"ALARM_ON\n")
+        marker_out = True
+    elif not any_marker_out and marker_out:
+        # All markers back, send ALARM_OFF
+        ser.write(b"ALARM_OFF\n")
+        marker_out = False
+
+    # Update individual marker states for logging
     for marker_id in camera_markers[0] + camera_markers[1]:
         if marker_id in current_out and not marker_state[marker_id]:
             print(f"⚠️ Marker {marker_id} out!")
-            threading.Thread(target=blink_led, daemon=True).start()
             marker_state[marker_id] = True
         elif marker_id not in current_out and marker_state[marker_id]:
             print(f"✅ Marker {marker_id} back")
@@ -150,6 +152,7 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+# Cleanup
 for cam in cams:
     cam.release()
 cv2.destroyAllWindows()
