@@ -1,46 +1,40 @@
 #include <Adafruit_NeoPixel.h>
 
 #define PIN 6
-#define NUMPIXELS 100
+#define NUMPIXELS 30
 
 Adafruit_NeoPixel strip(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
+bool alarm_on = false;
+
 void setup() {
+  Serial.begin(9600);
   strip.begin();
   strip.show();
-  Serial.begin(9600);
 }
 
 void loop() {
+  // Check for serial commands
   if (Serial.available()) {
-    String cmd = Serial.readStringUntil('\n');
-    cmd.trim();
+    String command = Serial.readStringUntil('\n');
 
-    if (cmd == "ALARM_ON") {
-      blinkRed(2000);  // blink for 2 seconds
-    } 
-    else if (cmd == "ALARM_OFF") {
+    if (command == "ALARM_ON") {
+      alarm_on = true;  // Start blinking
+    }
+    else if (command == "ALARM_OFF") {
+      alarm_on = false; // Stop blinking
       strip.clear();
       strip.show();
     }
   }
-}
 
-void blinkRed(unsigned long duration) {
-  unsigned long endTime = millis() + duration;
-
-  while (millis() < endTime) {
-    for (int i = 0; i < NUMPIXELS; i++) {
-      strip.setPixelColor(i, strip.Color(255, 0, 0));
-    }
+  // Blink while alarm is on
+  if (alarm_on) {
+    for (int i = 0; i < NUMPIXELS; i++) strip.setPixelColor(i, strip.Color(0, 0, 255)); // Blue
     strip.show();
-    delay(250);
-
+    delay(200);
     strip.clear();
     strip.show();
-    delay(250);
+    delay(200);
   }
-
-  strip.clear();
-  strip.show();
 }
