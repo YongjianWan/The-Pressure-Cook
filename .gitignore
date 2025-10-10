@@ -97,3 +97,13 @@ $RECYCLE.BIN/
 *.bak
 *.cache
 *.temp
+
+# HEZI GITIGNORE
+# Ignore everything under Sound Detection/sound_detection
+Sound Detection/sound_detection/**
+
+# …but keep the actual code/docs
+!Sound Detection/sound_detection/alarm.py
+!Sound Detection/sound_detection/calibrate.py
+!Sound Detection/sound_detection/requirements.txt
+!Sound Detection/sound_detection/README.md
