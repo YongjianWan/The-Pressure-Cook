@@ -118,7 +118,7 @@ ledstrip_countdown.py 是唯一開 Serial 的中樞：TTS＋70s 回合＋UDP 匯
 ### 4.1 確認貼紙字典
 
 ```bash
-cd ANN_0910/mac/tools
+cd Stir-Wars/mac/tools
 python detect_dict.py
 ```
 
@@ -128,7 +128,7 @@ python detect_dict.py
 ### 4.2 量 Marker ID、填 allow.json
 
 ```bash
-cd ANN_0910/mac
+cd Stir-Wars/mac
 python camera_works_fam.py
 ```
 
@@ -161,7 +161,7 @@ python camera_works_fam.py
 - 等比例縮放（解析度改變時）
 
   ```bash
-  cd ANN_0910/mac/tools
+  cd Stir-Wars/mac/tools
   python scale_zones.py ../zones.json 1280 720 1920 1080 > ../zones.json
   ```
 
@@ -174,7 +174,7 @@ python camera_works_fam.py
 - 視窗 A：Hub（TTS＋70s 回合＋UDP 匯流｜互動選埠）
 
   ```bash
-  cd ANN_0910/mac
+  cd Stir-Wars/mac
   # 啟動虛擬環境（macOS：source .venv/bin/activate；Windows：.\.venv\Scripts\Activate.ps1）
   python run_hub.py
   # 會列出 /dev/cu.usbmodem* / usbserial*（mac）或 COMx（Windows）
@@ -188,7 +188,7 @@ python camera_works_fam.py
 - 視窗 B：相機（ArUco → UDP）
 
   ```bash
-  cd ANN_0910/mac
+  cd Stir-Wars/mac
   python camera.py
   ```
 

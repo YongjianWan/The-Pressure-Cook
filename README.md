@@ -94,7 +94,7 @@ TTS: macOS uses the built-in `say`; Windows uses `pyttsx3` (SAPI).
 ### 4.1 Confirm marker dictionary
 
 ```bash
-cd ANN_0910/mac/tools
+cd Stir-Wars/mac/tools
 python detect_dict.py
 ```
 
@@ -104,7 +104,7 @@ If you see 4x4_50, change `DICT = aruco.DICT_5X5_100` in `mac/camera.py` to `aru
 ### 4.2 Capture marker IDs and fill allow.json
 
 ```bash
-cd ANN_0910/mac
+cd Stir-Wars/mac
 python camera_works_fam.py
 ```
 
@@ -137,7 +137,7 @@ The window draws polygons and red IDs; map each object → ID and fill `allow.js
 - Scale proportionally (when resolution changes)
 
   ```bash
-  cd ANN_0910/mac/tools
+  cd Stir-Wars/mac/tools
   python scale_zones.py ../zones.json 1280 720 1920 1080 > ../zones.json
   ```
 
@@ -150,7 +150,7 @@ Principle: only the Hub (`ledstrip_countdown.py`) opens the Arduino serial port;
 - Window A: Hub (TTS + 70 s rounds + UDP aggregation | interactive port picker)
 
   ```bash
-  cd ANN_0910/mac
+  cd Stir-Wars/mac
   # Activate virtualenv (macOS: source .venv/bin/activate; Windows: .\.venv\Scripts\Activate.ps1)
   python run_hub.py
   # Lists /dev/cu.usbmodem* / usbserial* (mac) or COMx (Windows)
@@ -164,7 +164,7 @@ Principle: only the Hub (`ledstrip_countdown.py`) opens the Arduino serial port;
 - Window B: Camera (ArUco → UDP)
 
   ```bash
-  cd ANN_0910/mac
+  cd Stir-Wars/mac
   python camera.py
   ```
 
