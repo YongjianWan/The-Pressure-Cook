@@ -50,7 +50,7 @@ Non-conflict principle: only the Hub (ledstrip_countdown.py / launched via run_h
 ### 2.2 Python (macOS / Windows)
 
 ```bash
-cd ANN_0910/mac
+cd Stir-Wars/mac  
 # macOS
 python3 -m venv .venv
 source .venv/bin/activate

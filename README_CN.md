@@ -74,7 +74,7 @@
 ### 2.2 Python（macOS / Windows）
 
 ```bash
-cd ANN_0910/mac
+cd Stir-Wars/mac  
 # macOS
 python3 -m venv .venv
 source .venv/bin/activate
