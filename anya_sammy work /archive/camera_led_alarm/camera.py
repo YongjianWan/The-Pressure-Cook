@@ -34,7 +34,7 @@ print(f"Arduino connected on {arduino_port}.")
 # --- Camera setup ---
 cams = [
     cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION),  # Camera 1
-    cv2.VideoCapture(1, cv2.CAP_AVFOUNDATION)   # Camera 2
+    cv2.VideoCapture(1, cv2.CAP_AVFOUNDATION),  # Camera 2
 ]
 for i, cam in enumerate(cams):
     if not cam.isOpened():
@@ -46,21 +46,16 @@ parameters = aruco.DetectorParameters()
 
 # --- Stations per camera (adjust coordinates to match your table) ---
 stations_cam1 = {
-    "station1": (50, 100, 250, 250),   # knife
+    "station1": (50, 100, 250, 250),  # knife
     "station2": (350, 100, 250, 250),  # peeler
 }
 stations_cam2 = {
-    "station3": (50, 100, 250, 250),   # spoon
+    "station3": (50, 100, 250, 250),  # spoon
     "station4": (350, 100, 250, 250),  # plate
 }
 
 # --- Marker assignments ---
-marker_to_station = {
-    1: "station1",
-    2: "station2",
-    3: "station3",
-    4: "station4"
-}
+marker_to_station = {1: "station1", 2: "station2", 3: "station3", 4: "station4"}
 
 # --- Which markers each camera tracks ---
 camera_markers = {
@@ -73,16 +68,19 @@ marker_state = {1: False, 2: False, 3: False, 4: False}
 marker_out = False
 stop_speech = threading.Event()
 
+
 # --- Functions ---
 def is_in_tray(center, tray_rect):
     x, y, w, h = tray_rect
     cx, cy = center
     return x <= cx <= x + w and y <= cy <= y + h
 
+
 def process_frame(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, _ = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
     return corners, ids
+
 
 def say_out_of_tray():
     """Repeats 'Out of tray' until stopped"""
@@ -105,7 +103,10 @@ while True:
 
     # Resize all frames to same height
     min_height = min([f.shape[0] for f in frames])
-    frames = [cv2.resize(f, (int(f.shape[1]*min_height/f.shape[0]), min_height)) for f in frames]
+    frames = [
+        cv2.resize(f, (int(f.shape[1] * min_height / f.shape[0]), min_height))
+        for f in frames
+    ]
 
     current_out = set()
 
@@ -121,23 +122,35 @@ while True:
                     continue
 
                 pts = corners[i][0].astype(int)
-                cx, cy = int(pts[:,0].mean()), int(pts[:,1].mean())
+                cx, cy = int(pts[:, 0].mean()), int(pts[:, 1].mean())
                 assigned_station = marker_to_station[marker_id]
 
                 in_tray = is_in_tray((cx, cy), stations_this_frame[assigned_station])
 
-                color = (255, 0, 0) if not in_tray else (0, 255, 0)  # Blue if out, green if in
+                color = (
+                    (255, 0, 0) if not in_tray else (0, 255, 0)
+                )  # Blue if out, green if in
                 text = f"Marker {marker_id}: {'OUT!' if not in_tray else 'In tray'}"
                 cv2.polylines(frame, [pts], True, color, 2)
-                cv2.putText(frame, text, (cx, cy-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                cv2.putText(
+                    frame, text, (cx, cy - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2
+                )
 
                 if not in_tray:
                     current_out.add(marker_id)
 
         # Draw station boxes
         for s_name, (x, y, w, h) in stations_this_frame.items():
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
-            cv2.putText(frame, s_name, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            cv2.putText(
+                frame,
+                s_name,
+                (x, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 0, 255),
+                2,
+            )
 
     # Combine frames side by side
     try:
@@ -170,7 +183,7 @@ while True:
             marker_state[marker_id] = False
 
     cv2.imshow("Utensil Monitor", combined)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         stop_speech.set()
         break
 
