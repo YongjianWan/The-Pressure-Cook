@@ -2,6 +2,8 @@ import cv2, json, numpy as np
 
 WIN='ROI Calibrator'; zones=[]; current=[]; snap=None
 def draw():
+    if snap is None:
+        return
     img=snap.copy()
     for z in zones:
         pts=np.array(z['pts'],np.int32)
