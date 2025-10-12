@@ -16,82 +16,53 @@ with open("zones.json", "r", encoding="utf-8") as f:
     Z = json.load(f)
 POLY = {z["name"]: np.array(z["pts"], np.int32) for z in Z}
 
-
 # ===== Camera backend (cross-platform) =====
 def open_cam(index=0, w=1280, h=720, fps=30):
     if sys.platform.startswith("win"):
         cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
     else:
         cap = cv2.VideoCapture(index)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  w)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
-    cap.set(cv2.CAP_PROP_FPS, fps)
+    cap.set(cv2.CAP_PROP_FPS,          fps)
     return cap
-
 
 cap = open_cam(0, 1280, 720, 30)
 
 # ===== Dictionary (change according to your sticker type) =====
-DICT = aruco.DICT_5X5_100  # 4x4_50 / 5x5_100 / 6x6_250
-adict = aruco.getPredefinedDictionary(DICT)
+DICT = aruco.DICT_5X5_100     # 4x4_50 / 5x5_100 / 6x6_250
+adict  = aruco.getPredefinedDictionary(DICT)
 params = aruco.DetectorParameters()
 
-print("[viewer] DICT =", DICT, "| Press ESC or Q to exit, or close window")
+print("[viewer] DICT =", DICT, "| ESC ")  # ESC to exit
 
-try:
-    while True:
-        ok, frame = cap.read()
-        if not ok:
-            print("[viewer] read fail")
-            break
+while True:
+    ok, frame = cap.read()
+    if not ok:
+        print("[viewer] read fail"); break
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        corners, ids, _ = aruco.detectMarkers(gray, adict, parameters=params)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    corners, ids, _ = aruco.detectMarkers(gray, adict, parameters=params)
 
-        # Draw ROI
-        for name, poly in POLY.items():
-            cv2.polylines(
-                frame, [poly], True, (0, 255, 0) if name != "TABLE" else (255, 0, 0), 2
-            )
-            center = poly.mean(axis=0).astype(int)
-            cv2.putText(
-                frame,
-                name,
-                tuple(center),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (0, 255, 0),
-                2,
-            )
+    # Draw ROI
+    for name, poly in POLY.items():
+        cv2.polylines(frame, [poly], True, (0, 255, 0) if name != "TABLE" else (255, 0, 0), 2)
+        center = poly.mean(axis=0).astype(int)
+        cv2.putText(frame, name, tuple(center), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
 
-        # Draw Marker and ID
-        if ids is not None:
-            aruco.drawDetectedMarkers(frame, corners, ids)
-            for i, mid in enumerate(ids.flatten()):
-                c = corners[i][0]
-                cx = int(c[:, 0].mean())
-                cy = int(c[:, 1].mean())
-                cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
-                cv2.putText(
-                    frame,
-                    f"ID:{mid}",
-                    (cx + 6, cy - 6),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (0, 0, 255),
-                    2,
-                )
+    # Draw Marker and ID
+    if ids is not None:
+        aruco.drawDetectedMarkers(frame, corners, ids)
+        for i, mid in enumerate(ids.flatten()):
+            c  = corners[i][0]
+            cx = int(c[:, 0].mean())
+            cy = int(c[:, 1].mean())
+            cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
+            cv2.putText(frame, f"ID:{mid}", (cx+6, cy-6), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
 
-        cv2.imshow("ROI / Marker Viewer", frame)
+    cv2.imshow("ROI / Marker Viewer", frame)
+    if cv2.waitKey(1) == 27:  # ESC
+        break
 
-        # ESC (27), Q (113) 退出
-        key = cv2.waitKey(1) & 0xFF
-        if key == 27 or key == ord("q"):
-            break
-
-except KeyboardInterrupt:
-    print("\n[viewer] Interrupted by user")
-finally:
-    cap.release()
-    cv2.destroyAllWindows()
-    print("[viewer] Cleanup complete")
+cap.release()
+cv2.destroyAllWindows()

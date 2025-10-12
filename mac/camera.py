@@ -5,7 +5,9 @@
 # 事件（UDP 送往 127.0.0.1:8787）：HARD_OUT / MESSY_ON / MESSY_OFF
 # Events (UDP to 127.0.0.1:8787): HARD_OUT / MESSY_ON / MESSY_OFF
 
-import json, time, socket, sys
+import argparse
+import json, time, socket, sys, os
+from pathlib import Path
 import numpy as np
 import cv2
 from cv2 import aruco
@@ -21,13 +23,19 @@ MESSY_ON_S  = 1.0   # 離位連續 ≥1.0s → MESSY_ON / outside allowed zones 
 MESSY_OFF_S = 0.8   # 回位連續 ≥0.8s → MESSY_OFF / back in allowed zone ≥0.8 s triggers MESSY_OFF
 MISSING_KILL = 5.0  # ★ 看不到超過 5s 視為「失蹤」→ 強制清狀態 / unseen >5 s considered missing → clear state
 
+BASE_DIR = Path(__file__).resolve().parent
+
+def _resolve_path(path: str) -> Path:
+    p = Path(path)
+    return p if p.is_absolute() else BASE_DIR / p
+
 def load_allow(path="allow.json"):
-    with open(path, "r", encoding="utf-8") as f:
+    with open(_resolve_path(path), "r", encoding="utf-8") as f:
         raw = json.load(f)
     return {int(k): v for k, v in raw.items()}
 
 def load_zones(path="zones.json"):
-    with open(path, "r", encoding="utf-8") as f:
+    with open(_resolve_path(path), "r", encoding="utf-8") as f:
         Z = json.load(f)
     poly = {z["name"]: np.array(z["pts"], np.int32) for z in Z}
     table = poly.get("TABLE")
@@ -37,13 +45,58 @@ def load_zones(path="zones.json"):
 ALLOW = load_allow("allow.json")
 TABLE, SECTIONS, POLY = load_zones("zones.json")
 
-def open_cam(index=0, w=1280, h=720, fps=30):
-    if sys.platform.startswith("win"):
-        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
-    else:
-        cap = cv2.VideoCapture(index)
+def _apply_capture_settings(cap, w, h, fps):
     cap.set(3, w); cap.set(4, h); cap.set(5, fps)
-    return cap
+
+def _candidate_indices(index, prefer_iphone):
+    if index is not None:
+        return [index]
+    base = [0, 1, 2, 3, 4]
+    if prefer_iphone and sys.platform == "darwin":
+        preferred = [1, 0]
+        rest = [i for i in base if i not in preferred]
+        return preferred + rest
+    return base
+
+def _camera_backends():
+    if sys.platform.startswith("win"):
+        return [cv2.CAP_DSHOW, cv2.CAP_ANY]
+    if sys.platform == "darwin":
+        return [cv2.CAP_AVFOUNDATION, cv2.CAP_ANY]
+    return [cv2.CAP_ANY]
+
+def _normalize_camera_arg(index):
+    if index is None:
+        return None
+    if isinstance(index, int):
+        return index
+    if isinstance(index, str) and index.isdigit():
+        return int(index)
+    return index
+
+def open_cam(index=None, w=1280, h=720, fps=30, prefer_iphone=False):
+    index = _normalize_camera_arg(index)
+    if isinstance(index, str):
+        cap = cv2.VideoCapture(index)
+        if cap.isOpened():
+            _apply_capture_settings(cap, w, h, fps)
+            print(f"[camera] using source '{index}'")
+            return cap
+        cap.release()
+        raise RuntimeError(f"unable to open camera source '{index}'")
+
+    tried = []
+    for idx in _candidate_indices(index, prefer_iphone):
+        for backend in _camera_backends():
+            cap = cv2.VideoCapture(idx, backend)
+            if cap.isOpened():
+                _apply_capture_settings(cap, w, h, fps)
+                print(f"[camera] using device index {idx} (backend={backend})")
+                return cap
+            cap.release()
+            tried.append(f"{idx}@{backend}")
+
+    raise RuntimeError(f"no camera available; tried: {', '.join(tried) if tried else 'none'}")
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 def emit(msg: str): sock.sendto(msg.encode(), (UDP_HOST, UDP_PORT))
@@ -57,11 +110,32 @@ def in_any(pt, names) -> bool:
 last_seen, bad_since, good_since = {}, {}, {}
 messy_state, hard_state = {}, {}
 
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="ArUco marker tracker with multi-ROI logic")
+    parser.add_argument("--camera", help="Camera index or stream URL (overrides CAMERA_INDEX env).")
+    parser.add_argument("--prefer-iphone", action="store_true", help="On macOS, try Continuity Camera/iPhone first.")
+    parser.add_argument("--width", type=int, default=CAM_W, help=f"Capture width (default: {CAM_W}).")
+    parser.add_argument("--height", type=int, default=CAM_H, help=f"Capture height (default: {CAM_H}).")
+    parser.add_argument("--fps", type=int, default=CAM_FPS, help=f"Capture FPS (default: {CAM_FPS}).")
+    return parser.parse_args()
+
 def main():
-    cap = open_cam(0, CAM_W, CAM_H, CAM_FPS)
+    args = parse_args()
+    cam_arg = args.camera if args.camera is not None else os.environ.get("CAMERA_INDEX")
+    prefer_iphone = args.prefer_iphone or _env_flag("PREFER_IPHONE_CAM")
+
+    try:
+        cap = open_cam(cam_arg, args.width, args.height, args.fps, prefer_iphone=prefer_iphone)
+    except RuntimeError as err:
+        print(f"[camera] {err}")
+        sys.exit(1)
+
     adict  = aruco.getPredefinedDictionary(DICT)
     params = aruco.DetectorParameters()
-    print("[camera] start:", CAM_W, "x", CAM_H, "@", CAM_FPS, "DICT=", DICT)
+    print("[camera] start:", args.width, "x", args.height, "@", args.fps, "DICT=", DICT)
 
     while True:
         ok, frame = cap.read()

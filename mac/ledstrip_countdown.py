@@ -39,6 +39,7 @@
 #   ※ `START` resets the round counter (first 3 rounds = 10 s prep, afterwards 5 s)
 
 import time
+import os
 import sys
 import socket
 import threading
@@ -57,9 +58,12 @@ UDP_HOST, UDP_PORT = "127.0.0.1", 8787
 # 語音優先序（數字越小越優先）
 # Voice priority (smaller number = higher priority)
 PRIO = {
+    'START': 0,
     'NOISY_ON': 1,
+    'NOISY_OFF': 1,
     'HARD_OUT': 2,   # ★ 安全最高，永不延後 / safety absolute priority, never delayed
     'MESSY_ON': 3,
+    'MESSY_OFF': 3,
     'QUIET_ON': 4,
     'ALARM_WARNING': 5,
     'ALARM_ON': 6,
@@ -71,10 +75,23 @@ PRIO = {
 def say(txt: str, rate: int = 200):
     """macOS 用 say；Windows/Linux 用 pyttsx3；失敗時降級為 print / macOS uses say; Windows/Linux uses pyttsx3; fallback prints."""
     if sys.platform == "darwin":
-        try:
-            subprocess.run(["say", "-r", str(rate), txt], check=False)
-        except Exception:
-            print(f"[TTS] {txt}")
+        voices = []
+        requested = os.environ.get("HUB_TTS_VOICE", "").strip()
+        if requested:
+            voices.append(requested)
+        voices.append("Samantha")
+        last_err = None
+        for voice in voices:
+            cmd = ["say", "-r", str(rate)]
+            if voice:
+                cmd.extend(["-v", voice])
+            cmd.append(txt)
+            try:
+                subprocess.run(cmd, check=True)
+                return
+            except Exception as err:
+                last_err = err
+        print(f"[TTS] {txt} (say failed: {last_err})")
     else:
         try:
             import pyttsx3
@@ -143,9 +160,9 @@ class Hub:
         self.noisy      = False
         self.round_idx  = 0        # ★ 回合計數：0、1、2 回合準備 10s；之後 5s / round index with 10 s prep for first 3 rounds
         self.use_timer  = use_timer
-        self._start_time= time.monotonic()
-        self._last_warn = -1
-        self._last_on   = -1
+        self._start_time    = time.monotonic()
+        self._last_warn_cyc = -1  # 上一次 WARN 所在回合 / cycle index of last warning
+        self._last_on_cyc   = -1  # 上一次 ALARM_ON 所在回合 / cycle index of last ALARM_ON
 
         # UDP listener（camera.py / 其他腳本丟事件進來）
         # UDP listener for camera.py and other publishers
@@ -182,6 +199,7 @@ class Hub:
     # ----- Event handling -----
     def enqueue(self, msg: str):
         if msg in PRIO:
+            print(f"[Hub] enqueue {msg}")
             self.q.put((PRIO[msg], time.time(), msg))
         else:
             # 未列入 PRIO 的雜訊忽略
@@ -194,9 +212,9 @@ class Hub:
         # ★ `START`: reset round state
         if msg == 'START':
             self.round_idx  = 0
-            self._start_time= time.monotonic()
-            self._last_warn = -1
-            self._last_on   = -1
+            self._start_time    = time.monotonic()
+            self._last_warn_cyc = -1
+            self._last_on_cyc   = -1
             # 可選：播提示
             # Optional: play start prompt
             # say('Session start.', rate=190)
@@ -267,20 +285,21 @@ class Hub:
         """
         warn_at = 50.0 if self.round_idx < 3 else 55.0
 
-        t = (time.monotonic() - self._start_time) % CYCLE
-        now_i = int(time.monotonic())
+        elapsed = time.monotonic() - self._start_time
+        cycle   = int(elapsed // CYCLE)
+        phase   = elapsed % CYCLE
 
-        # 準備提醒（只觸發一次）
-        # Preparation warning (fire once)
-        if abs(t - warn_at) < 0.12 and now_i != self._last_warn:
+        # 準備提醒（每回合一次）
+        # Preparation warning (once per cycle)
+        if phase >= warn_at and self._last_warn_cyc != cycle:
             self.enqueue('ALARM_WARNING')
-            self._last_warn = now_i
+            self._last_warn_cyc = cycle
 
-        # 換位點（只觸發一次），並增加回合數
-        # Swap point (fire once) and bump round counter
-        if abs(t - SWITCH) < 0.12 and now_i != self._last_on:
+        # 換位點（每回合一次），並增加回合數
+        # Swap point (once per cycle), bump round counter
+        if phase >= SWITCH and self._last_on_cyc != cycle:
             self.enqueue('ALARM_ON')
-            self._last_on = now_i
+            self._last_on_cyc = cycle
             self.round_idx += 1   # ★ 下一回合開始 / next round
 
     def loop(self):
