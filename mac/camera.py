@@ -147,6 +147,7 @@ def main():
         if ids is not None:
             ids = ids.flatten()
             for i, mid in enumerate(ids):
+                mid = int(mid)  # Convert NumPy int to Python int
                 c  = corners[i][0]
                 cx = int(c[:,0].mean()); cy = int(c[:,1].mean())
                 pt = (cx, cy)
