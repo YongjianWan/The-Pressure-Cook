@@ -45,9 +45,11 @@ const int PIN_RST = 9;    // RST
 MFRC522 rfid(PIN_SS, PIN_RST);
 
 // TODO: Replace with actual tag UIDs (hex)
+// ⚠️ 临时方案：接受任意卡片（稍后替换真实 UID）
 byte UID_START_P3[]  = {0xDE,0xAD,0xBE,0xEF};  //  P3 start
 byte UID_FINISH_P1[] = {0x12,0x34,0x56,0x78};  //  P1 finish
 bool hubRunning = false;
+bool USE_ANY_CARD = true;  // ← 设为 false 后需要匹配 UID
 
 bool uidEq(byte *a, byte *b, byte len){ for(byte i=0;i<len;i++){ if(a[i]!=b[i]) return false; } return true; }
 
@@ -74,7 +76,9 @@ void setup(){
   Serial.begin(9600);
   ledsInit(); ledsOff();
 
-  SPI.begin(); rfid.PCD_Init();
+  SPI.begin(); 
+  rfid.PCD_Init();
+  rfid.PCD_SetAntennaGain(rfid.RxGain_max);  // ★ 增加天线增益
 
   buzz(80); delay(60); buzz(80);   // power-on chirp
 }
@@ -83,13 +87,48 @@ void loop(){
 
   // ---- RFID: detect START / FINISH tags ----
   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()){
-    byte *uid = rfid.uid.uidByte; byte len = rfid.uid.size;
-    if (!hubRunning && uidEq(uid, UID_START_P3, len)){
-      hubRunning = true; Serial.println("START");
-    } else if (hubRunning && uidEq(uid, UID_FINISH_P1, len)){
-      Serial.println("FINISH"); hubRunning = false;
+    byte *uid = rfid.uid.uidByte; 
+    byte len = rfid.uid.size;
+    
+    // ⚠️ 临时模式：任意卡触发（调试用）
+    if (USE_ANY_CARD) {
+      if (!hubRunning) {
+        // 任意卡 → START
+        hubRunning = true;
+        Serial.println("START");
+        pulse(120);
+        buzz(120);
+      } else {
+        // 再刷一次 → FINISH
+        Serial.println("FINISH");
+        hubRunning = false;
+      }
     }
+    // 正式模式：匹配 UID
+    else {
+      // P3 卡：启动会话
+      if (!hubRunning && uidEq(uid, UID_START_P3, len)){
+        hubRunning = true; 
+        Serial.println("START");
+        pulse(120);  // 短亮提示
+        buzz(120);
+      } 
+      // P1 卡：结束会话
+      else if (hubRunning && uidEq(uid, UID_FINISH_P1, len)){
+        Serial.println("FINISH"); 
+        hubRunning = false;
+        // LED 庆祝由 Hub 的 END 事件控制，这里不做
+      }
+      // 未知卡或时机不对
+      else {
+        Serial.println("RFID_ERROR");
+        flash(2, 100, 100);  // 红灯快闪（虽然是白光，但快闪 = 错误）
+        buzz(150, 800);      // 低音错误提示
+      }
+    }
+    
     rfid.PICC_HaltA();
+    delay(500);  // 防连刷
   }
 
   // ---- Microphone: emit NOISY_* / QUIET_ON ----
@@ -129,6 +168,7 @@ void loop(){
     else if (cmd=="NOISY_ON")     {              pulse(500); }        // 脈衝一次 / single pulse
     else if (cmd=="NOISY_OFF")    {              ledsOff(); }
     else if (cmd=="QUIET_ON")     {              pulse(150); }        // 輕閃一次 / gentle pulse
+    else if (cmd=="RFID_ERROR")   {              flash(2,100,100); buzz(150,800); }  // 快閃+低音錯誤 / quick flash + low buzz
     else if (cmd=="END")          { buzzFanfare(); for(int i=0;i<3;i++){ pulse(180); delay(120);} }
     else if (cmd=="RESET")        {              ledsOff(); }
   }

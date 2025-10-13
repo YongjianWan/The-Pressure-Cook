@@ -59,6 +59,8 @@ UDP_HOST, UDP_PORT = "127.0.0.1", 8787
 # Voice priority (smaller number = higher priority)
 PRIO = {
     'START': 0,
+    'FINISH': 0,        # ← RFID 结束会话
+    'RFID_ERROR': 1,    # ← 未知卡错误
     'NOISY_ON': 1,
     'NOISY_OFF': 1,
     'HARD_OUT': 2,   # ★ 安全最高，永不延後 / safety absolute priority, never delayed
@@ -217,7 +219,34 @@ class Hub:
             self._last_on_cyc   = -1
             # 可選：播提示
             # Optional: play start prompt
-            # say('Session start.', rate=190)
+            say('Session start.', rate=190)
+            return
+
+        # ★ FINISH：停止计时 + 播完成语音
+        # ★ `FINISH`: stop timer and play completion voice
+        if msg == 'FINISH':
+            rounds = self.round_idx
+            self.forward('END')  # LED 三段庆祝
+            
+            # 依回合数播不同语音
+            # Play different voices based on round count
+            if rounds <= 6:
+                say('Lightning speed! Under 7 minutes, great teamwork!', rate=190)
+            elif rounds <= 8:
+                say('Well done! Finished on time with clear communication!', rate=190)
+            elif rounds <= 10:
+                say('Task complete! Steady work and good safety!', rate=190)
+            else:
+                say('Task finished! Try faster handoffs next time!', rate=190)
+            
+            self.use_timer = False  # 停止计时器
+            return
+
+        # ★ RFID_ERROR：提示重刷
+        # ★ `RFID_ERROR`: prompt to retry
+        if msg == 'RFID_ERROR':
+            say('RFID error, please try again.', rate=190)
+            self.forward('RFID_ERROR')  # Arduino 会闪灯
             return
 
         if msg == 'NOISY_ON':
