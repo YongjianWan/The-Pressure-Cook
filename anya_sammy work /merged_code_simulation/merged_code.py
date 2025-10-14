@@ -6,6 +6,7 @@ import time
 import threading
 import sys
 import select
+import queue
 
 # ---------------- Arduino Setup ----------------
 ser = serial.Serial('/dev/cu.usbmodem1101', 9600)  # adjust port
@@ -45,7 +46,21 @@ task_interval = 45  # seconds
 
 simulated_queue = []
 
-# ---------------- Functions ----------------
+# ---------------- Speech Queue ----------------
+speech_queue = queue.Queue()
+
+def speech_worker():
+    while True:
+        message = speech_queue.get()
+        os.system(f'say "{message}"')
+        speech_queue.task_done()
+
+threading.Thread(target=speech_worker, daemon=True).start()
+
+def speak(message):
+    speech_queue.put(message)
+
+# ---------------- Utility Functions ----------------
 def is_in_tray(center, tray_rect):
     x, y, w, h = tray_rect
     cx, cy = center
@@ -69,9 +84,6 @@ def send_led_state(state):
         }
         ser.write(command_map.get(state, b"OFF\n"))
         led_state = state
-
-def speak(message):
-    threading.Thread(target=lambda: os.system(f'say "{message}"'), daemon=True).start()
 
 def blink_led(led_command, times=5, delay=0.35):
     global blink_active
@@ -108,42 +120,34 @@ def countdown_task_switch():
     global blink_active
     if blink_active:
         return
-    total_countdown_time = 7  # seconds
-    blink_interval = 0.4       # seconds per blink
 
-    def blink_blue():
+    def thread_func():
         global blink_active
         blink_active = True
-        end_time = time.time() + total_countdown_time
-        while time.time() < end_time:
+
+        total_blink_time = 7
+        blink_interval = 0.4
+        start_time = time.time()
+
+        # Start speaking right away (parallel to blinking)
+        speak("Switching tasks soon")
+
+        # Blink for total_blink_time seconds
+        while time.time() - start_time < total_blink_time:
             send_led_state("BLUE_BLINK")
             time.sleep(blink_interval)
             send_led_state("OFF")
             time.sleep(blink_interval)
+
+        # After 5 seconds, say "Switch tasks now"
+        time.sleep(max(0, 5 - (time.time() - start_time)))
+        speak("Switch tasks now")
+
         blink_active = False
         send_led_state("GREEN")
 
-    threading.Thread(target=blink_blue, daemon=True).start()
-    speak("Switching tasks soon")
-    for i in range(5, 0, -1):
-        speak(str(i))
-        time.sleep(1)
-    speak("Switch Tasks Now")
-    time.sleep(0.5)
-    send_led_state("GREEN")
+    threading.Thread(target=thread_func, daemon=True).start()
 
-# ---------------- Marker Out Speech ----------------
-def check_marker_out_speech():
-    global last_speech_time
-    while True:
-        if marker_out:
-            now = time.time()
-            if now - last_speech_time > speech_interval:
-                speak("Marker out of tray")
-                last_speech_time = now
-        time.sleep(0.1)
-
-threading.Thread(target=check_marker_out_speech, daemon=True).start()
 
 # ---------------- Main Loop ----------------
 while True:
@@ -160,20 +164,20 @@ while True:
             if marker_id not in camera_markers:
                 continue
             pts = corners[i][0].astype(int)
-            cx, cy = int(pts[:,0].mean()), int(pts[:,1].mean())
+            cx, cy = int(pts[:, 0].mean()), int(pts[:, 1].mean())
             assigned_station = marker_to_station[marker_id]
             in_tray = is_in_tray((cx, cy), stations[assigned_station])
             if not in_tray:
                 current_out.add(marker_id)
-            color = (255,0,0) if not in_tray else (0,255,0)
+            color = (255, 0, 0) if not in_tray else (0, 255, 0)
             cv2.polylines(frame, [pts], True, color, 2)
             cv2.putText(frame, f"Marker {marker_id}: {'OUT!' if not in_tray else 'In tray'}",
-                        (cx, cy-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                        (cx, cy - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
     # --- Draw stations ---
-    for s_name, (x,y,w,h) in stations.items():
-        cv2.rectangle(frame, (x,y,w,h), (0,0,255), 2)
-        cv2.putText(frame, s_name, (x,y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+    for s_name, (x, y, w, h) in stations.items():
+        cv2.rectangle(frame, (x, y, w, h), (0, 0, 255), 2)
+        cv2.putText(frame, s_name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
     # --- Priority Handling ---
     now = time.time()

@@ -9,6 +9,10 @@ python alarm.py --in 2 --out 5 --sr 44100 --hp 100 \
 import argparse, time, math, threading
 import numpy as np, sounddevice as sd, queue
 
+def speak_and_blink(message, led_command, times=5, delay=0.35):
+    speak(message)
+    blink_led(led_command, times, delay)
+
 # High pass filter. Edit fc cutoff as needed. sr is the sample rate.
 def hp1(x, sr, fc=100.0, state={'a':None,'xn1':0.0,'yn1':0.0}):
     if state['a'] is None:
@@ -100,6 +104,7 @@ def main():
                 state = "fired"
                 last_fire = now
                 q.put(beep)
+                speak_and_blink("Volume is too loud. Calm down", "YELLOW_BLINK")
         elif state == "fired":
             # wait for cooldown start condition
             state = "cooldown"
