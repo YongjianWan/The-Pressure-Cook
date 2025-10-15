@@ -206,7 +206,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--live", action="store_true", help="Use camera; SPACE to pause, then draw")
     ap.add_argument("--img", type=str, help="Annotate on an existing image")
-    ap.add_argument("--cam", type=int, default=0, help="Camera index (default: 0)")
+    ap.add_argument("--cam", type=int, default=1, help="Camera index (default: 0)")
     ap.add_argument("--out", type=str, default="config/zones.json", help="Output JSON (default: config/zones.json)")
     ap.add_argument("--cap-width", type=int, default=1920, help="Capture width (live)")
     ap.add_argument("--cap-height", type=int, default=1080, help="Capture height (live)")

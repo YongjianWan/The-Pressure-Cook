@@ -47,12 +47,12 @@ def _point_in_poly(x, y, poly):
     return inside
 
 # ---------------- Arduino Setup ----------------
-ser = serial.Serial('/dev/cu.usbmodem31101', 9600)  # adjust port
+ser = serial.Serial('/dev/cu.usbmodem1201', 9600)  # adjust port
 time.sleep(2)
 print("✅ Arduino connected.")
 
 # ---------------- Camera Setup ----------------
-cam = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
+cam = cv2.VideoCapture(1, cv2.CAP_AVFOUNDATION)
 if not cam.isOpened():
     raise Exception("⚠ Could not open camera 0")
 
@@ -279,7 +279,7 @@ while True:
         if not marker_out:
             marker_out = True
         if not blink_active:
-            speak_and_blink("Marker out of tray", "RED_BLINK")
+            speak_and_blink("Counter too messy.", "RED_BLINK")
     else:
         marker_out = False
         if not blink_active:
