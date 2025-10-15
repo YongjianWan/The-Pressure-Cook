@@ -1,0 +1,46 @@
+# Global Git ignore file for Python projects
+# This file applies to ALL Git repositories on this machine
+
+# Python cache files - 绝对禁止
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+**/__pycache__/**
+**/*.pyc
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.cache
