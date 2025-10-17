@@ -6,8 +6,9 @@ Adafruit_NeoPixel strip(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 enum State { OFF, GREEN, BLUE_BLINK, RED_BLINK, YELLOW_BLINK };
 State ledState = OFF;
+esk
 
-void setup() {/Users/ann_2025/Desktop/merged_code_simulation/crossplatform_bundle/merged_code/merged_code.ino
+void setup() {/Users/ann_2025/Dtop/merged_code_simulation/crossplatform_bundle/merged_code/merged_code.ino
   Serial.begin(9600);
   strip.begin();
   strip.show();
