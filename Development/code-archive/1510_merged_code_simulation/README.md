@@ -1,5 +1,3 @@
-## ------- Hezi
-
 # Sound Detection Alarm (Python-only)
 Monitors room loudness from an audio interface mic and plays an alarm on laptop speakers.
 

@@ -1,4 +1,4 @@
-# To run calibrate run: python3 calibrate.py --in <input device index> --sr 44100 --seconds 20 --hp 100
+# To run calibrate run: python3 calibrate.py --in <input device pyt> --sr 44100 --seconds 20 --hp 100
 # Example: python3 calibrate.py --in 2 --sr 44100
 
 import json, time, math, numpy as np, sounddevice as sd

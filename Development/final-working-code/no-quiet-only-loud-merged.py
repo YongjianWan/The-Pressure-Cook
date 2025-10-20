@@ -380,7 +380,7 @@ def countdown_task_switch():
     send_led_state("BLUE_BLINK")
 
     # stage 1 + numbers + final line (all tagged as countdown)
-    speak("Switching tasks soon", tag="countdown")
+    speak("Please find a new stations soon", tag="countdown")
     for n in range(5, 0, -1):
         if my_token != blink_token:     # cancelled (shouldn’t happen: highest prio)
             return
@@ -388,7 +388,7 @@ def countdown_task_switch():
 
     if my_token != blink_token:
         return
-    speak("Switch tasks now", tag="countdown")
+    speak("Go to a new station now", tag="countdown")
 
     # wait until all the above countdown lines have been spoken
     while my_token == blink_token and (current_speech_tag is not None or not speech_queue.empty()):
@@ -542,7 +542,7 @@ while True:
     elif aruco_out and PRIO_MARKER > current_priority:
         # 2) MARKER OUT — pre-empt sound
         # marker branch
-        speak_and_blink("Marker out of tray", "RED_BLINK", times=6, delay=0.35,
+        speak_and_blink("Counter too messy. Please clean up.", "RED_BLINK", times=6, delay=0.35,
                         priority=PRIO_MARKER, tag="marker")
 
     elif (not task_due) and (not aruco_out) and sound_loud and PRIO_SOUND >= current_priority:
@@ -563,7 +563,7 @@ while True:
         while simulated_queue:
             key = simulated_queue.pop(0)
             if key == "1":
-                speak_and_blink("Counter too messy", "RED_BLINK")
+                speak_and_blink("Counter too messy. Please clean up.", "RED_BLINK")
             elif key == "2":
                 speak_and_blink("Volume is too loud. Calm down", "YELLOW_BLINK")
             elif key == "3":
