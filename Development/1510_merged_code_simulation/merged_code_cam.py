@@ -47,7 +47,7 @@ def _point_in_poly(x, y, poly):
     return inside
 
 # ---------------- Arduino Setup ----------------
-ser = serial.Serial('/dev/cu.usbmodem1201', 9600)  # adjust port
+ser = serial.Serial('/dev/cu.usbmodem1101', 9600)  # adjust port
 time.sleep(2)
 print("✅ Arduino connected.")
 

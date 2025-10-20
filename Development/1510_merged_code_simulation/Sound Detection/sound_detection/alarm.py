@@ -1,7 +1,7 @@
 """
 Example running when Audio interface mic input level is inbetween 2-4 oclocks on the volume knob.
 
-python alarm.py --in 2 --out 5 --sr 44100 --hp 100 \
+python alarm.py --in 2 --out 5 --sr 44100 --hp 100 
   --trig -26.9 --rel -30.9 --hold 1.0 --cooldown 7 --print
 
 """

@@ -137,7 +137,7 @@ time.sleep(2)
 print("✅ Arduino connected.")
 
 # ---------------- Camera Setup ----------------
-cam = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
+cam = cv2.VideoCapture(1, cv2.CAP_AVFOUNDATION)
 if not cam.isOpened():
     raise Exception("⚠ Could not open camera 0")
 
