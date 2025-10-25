@@ -27,7 +27,7 @@ pip install opencv-python opencv-contrib-python numpy pyserial sounddevice
 ### Hardware Setup
 1. Connect Arduino via USB
 2. Upload `merged-arduino/merged-arduino.ino` via Arduino IDE
-3. **Important**: Check serial port with `ls /dev/tty.*` and update line 47 in main script
+3. **Important**: Check serial port with `ls /dev/tty.*` and update line 135 in main script
 
 
 **Hardware Requirements**:
