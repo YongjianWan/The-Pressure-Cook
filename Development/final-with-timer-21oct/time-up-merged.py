@@ -2,6 +2,8 @@
 # We confirm that we fully understood all suggested changes and adjusted the code where needed.
 # we maintained control over the functionality and how the code priorities and arduino connections should be done at all times.
 
+# python3 time-up-merged.py --trig-db -17.0 --rel-db -21.0 --print-audio
+
 import cv2
 import cv2.aruco as aruco
 import serial
