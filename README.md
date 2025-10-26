@@ -149,9 +149,9 @@ The-Pressure-Cook/
 │   └── final-with-timer-21oct/
 │
 ├── Tradeshow Materials/
-│   ├── Main Poster.pdf
-│   ├── Promo Poster.pdf
-│   └── Research Poster.pdf
+│   ├── Conference-style poster.pdf
+│   ├── Brand poster.pdf
+│   └── Supporting poster.pdf
 │
 └── README.md
 ```
